@@ -1,0 +1,6 @@
+{
+  "name": "Pilulier",
+  "description": "Application de rappel et suivi des prises de médicaments",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
