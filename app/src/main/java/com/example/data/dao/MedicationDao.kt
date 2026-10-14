@@ -28,7 +28,7 @@ interface MedicationDao {
     suspend fun getMedicationWithSchedulesByIdSync(id: Long): MedicationWithSchedules?
 
     @Transaction
-    @Query("SELECT * FROM medications WHERE isPaused = 0 AND endDate >= :nowMillis")
+    @Query("SELECT * FROM medications WHERE isPaused = 0 AND (endDate IS NULL OR endDate >= :nowMillis)")
     suspend fun getActiveFutureMedicationsSync(nowMillis: Long): List<MedicationWithSchedules>
 
     @Transaction

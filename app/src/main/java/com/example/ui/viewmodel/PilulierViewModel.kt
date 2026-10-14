@@ -185,13 +185,13 @@ class PilulierViewModel(application: Application) : AndroidViewModel(application
         quantityPerDose: String,
         instructions: String,
         startDate: LocalDate,
-        endDate: LocalDate,
+        endDate: LocalDate?,
         schedules: List<Pair<Int, Int>> // List of (Hour, Minute)
     ) {
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
             val startMillis = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
-            val endMillis = endDate.atTime(23, 59, 59).atZone(zone).toInstant().toEpochMilli()
+            val endMillis = endDate?.atTime(23, 59, 59)?.atZone(zone)?.toInstant()?.toEpochMilli()
 
             val medication = Medication(
                 id = id,

@@ -132,8 +132,13 @@ object AlarmScheduler {
 
         val startLocalDate = Instant.ofEpochMilli(item.medication.startDate)
             .atZone(zone).toLocalDate()
-        val endLocalDate = Instant.ofEpochMilli(item.medication.endDate)
-            .atZone(zone).toLocalDate()
+        val endLocalDate = item.medication.endDate?.let {
+            Instant.ofEpochMilli(it).atZone(zone).toLocalDate()
+        } ?: run {
+            val today = LocalDate.now(zone)
+            val baseDate = if (today.isAfter(startLocalDate)) today else startLocalDate
+            baseDate.plusDays(30)
+        }
 
         var currentDay = startLocalDate
         while (!currentDay.isAfter(endLocalDate)) {
@@ -162,8 +167,13 @@ object AlarmScheduler {
         val zone = ZoneId.systemDefault()
         val startLocalDate = Instant.ofEpochMilli(item.medication.startDate)
             .atZone(zone).toLocalDate()
-        val endLocalDate = Instant.ofEpochMilli(item.medication.endDate)
-            .atZone(zone).toLocalDate()
+        val endLocalDate = item.medication.endDate?.let {
+            Instant.ofEpochMilli(it).atZone(zone).toLocalDate()
+        } ?: run {
+            val today = LocalDate.now(zone)
+            val baseDate = if (today.isAfter(startLocalDate)) today else startLocalDate
+            baseDate.plusDays(30)
+        }
 
         var currentDay = startLocalDate
         while (!currentDay.isAfter(endLocalDate)) {

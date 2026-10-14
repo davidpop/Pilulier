@@ -43,6 +43,7 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -96,11 +97,15 @@ fun AddEditMedicationScreen(
         )
     }
 
+    var isContinuousTreatment by remember {
+        mutableStateOf(editingMedication?.medication?.let { it.endDate == null } ?: false)
+    }
+
     var endDate by remember {
-        mutableStateOf(
-            editingMedication?.medication?.let {
-                Instant.ofEpochMilli(it.endDate).atZone(zone).toLocalDate()
-            } ?: LocalDate.now().plusDays(6) // 7 jours par défaut
+        mutableStateOf<LocalDate?>(
+            editingMedication?.medication?.endDate?.let {
+                Instant.ofEpochMilli(it).atZone(zone).toLocalDate()
+            } ?: LocalDate.now().plusDays(6) // 7 jours par défaut si limité
         )
     }
 
@@ -128,11 +133,13 @@ fun AddEditMedicationScreen(
     var formDropdownExpanded by remember { mutableStateOf(false) }
 
     // Calcul de la durée en jours
-    val treatmentDays = remember(startDate, endDate) {
-        if (!endDate.isBefore(startDate)) {
-            ChronoUnit.DAYS.between(startDate, endDate) + 1
+    val treatmentDays = remember(startDate, endDate, isContinuousTreatment) {
+        if (isContinuousTreatment || endDate == null) {
+            null
+        } else if (!endDate!!.isBefore(startDate)) {
+            ChronoUnit.DAYS.between(startDate, endDate!!) + 1
         } else {
-            0
+            0L
         }
     }
 
@@ -143,7 +150,7 @@ fun AddEditMedicationScreen(
             onDismiss = { showStartDatePicker = false },
             onDateSelected = { selected ->
                 startDate = selected
-                if (endDate.isBefore(startDate)) {
+                if (!isContinuousTreatment && endDate != null && endDate!!.isBefore(startDate)) {
                     endDate = startDate
                 }
                 showStartDatePicker = false
@@ -154,7 +161,7 @@ fun AddEditMedicationScreen(
     // DatePicker pour la date de fin
     if (showEndDatePicker) {
         AppDatePickerDialog(
-            initialDate = endDate,
+            initialDate = endDate ?: startDate.plusDays(6),
             onDismiss = { showEndDatePicker = false },
             onDateSelected = { selected ->
                 if (selected.isBefore(startDate)) {
@@ -430,34 +437,75 @@ fun AddEditMedicationScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Date de fin
+                // Option : Traitement continu / durée indéterminée
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                        .clickable { showEndDatePicker = true }
-                        .padding(14.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Date de fin",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = endDate.format(dateFormatter),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            text = "Traitement continu",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        Text(
+                            text = "Durée illimitée (pas de date de fin programmée)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = "Changer date de fin",
-                        tint = MaterialTheme.colorScheme.primary
+                    Switch(
+                        checked = isContinuousTreatment,
+                        onCheckedChange = { checked ->
+                            isContinuousTreatment = checked
+                            if (!checked && endDate == null) {
+                                endDate = startDate.plusDays(6)
+                            }
+                            if (checked) {
+                                errorMessage = null
+                            }
+                        },
+                        modifier = Modifier.testTag("continuous_treatment_switch")
                     )
+                }
+
+                if (!isContinuousTreatment) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Date de fin
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .clickable { showEndDatePicker = true }
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Date de fin",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = endDate?.format(dateFormatter) ?: "Sélectionner une date",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = "Changer date de fin",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -469,7 +517,13 @@ fun AddEditMedicationScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (treatmentDays > 0) "Durée du traitement : $treatmentDays jour(s)" else "Période invalide",
+                        text = if (isContinuousTreatment) {
+                            "Durée du traitement : Traitement continu (illimité)"
+                        } else if (treatmentDays != null && treatmentDays > 0) {
+                            "Durée du traitement : $treatmentDays jour(s)"
+                        } else {
+                            "Période invalide"
+                        },
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(12.dp)
@@ -656,7 +710,11 @@ fun AddEditMedicationScreen(
 
                 val medSummaryName = if (name.isNotBlank()) name else "(Nom non renseigné)"
                 val schedulesSummary = schedules.joinToString(", ") { "%02dh%02d".format(it.first, it.second) }
-                val totalDosesTreatment = treatmentDays * schedules.size
+                val periodSummary = if (isContinuousTreatment) {
+                    "À partir du ${startDate.format(dateFormatter)} (Traitement continu illimité)"
+                } else {
+                    "du ${startDate.format(dateFormatter)} au ${endDate?.format(dateFormatter)} ($treatmentDays jours)"
+                }
 
                 Text(
                     text = "• Médicament : $medSummaryName" + if (dosage.isNotBlank()) " ($dosage)" else "",
@@ -664,7 +722,7 @@ fun AddEditMedicationScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "• Période : du ${startDate.format(dateFormatter)} au ${endDate.format(dateFormatter)} ($treatmentDays jours)",
+                    text = "• Période : $periodSummary",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -674,7 +732,12 @@ fun AddEditMedicationScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "• Total estimé : $totalDosesTreatment rappels programmés",
+                    text = if (isContinuousTreatment) {
+                        "• Programmation : Rappels continus quotidiens"
+                    } else {
+                        val totalDosesTreatment = (treatmentDays ?: 0L) * schedules.size
+                        "• Total estimé : $totalDosesTreatment rappels programmés"
+                    },
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -691,7 +754,7 @@ fun AddEditMedicationScreen(
                     errorMessage = "Veuillez renseigner le nom du médicament."
                     return@Button
                 }
-                if (endDate.isBefore(startDate)) {
+                if (!isContinuousTreatment && endDate != null && endDate!!.isBefore(startDate)) {
                     errorMessage = "La date de fin doit être postérieure ou égale à la date de début."
                     return@Button
                 }
@@ -699,6 +762,8 @@ fun AddEditMedicationScreen(
                     errorMessage = "Veuillez ajouter au moins un horaire de prise."
                     return@Button
                 }
+
+                val finalEndDate = if (isContinuousTreatment) null else endDate
 
                 viewModel.saveTreatment(
                     id = editingMedication?.medication?.id ?: 0L,
@@ -708,7 +773,7 @@ fun AddEditMedicationScreen(
                     quantityPerDose = quantityPerDose,
                     instructions = instructions,
                     startDate = startDate,
-                    endDate = endDate,
+                    endDate = finalEndDate,
                     schedules = schedules.toList()
                 )
             },

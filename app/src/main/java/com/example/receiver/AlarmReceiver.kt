@@ -36,8 +36,10 @@ class AlarmReceiver : BroadcastReceiver() {
                     val med = medWithSchedules.medication
                     val now = System.currentTimeMillis()
 
-                    // Vérifier si le traitement n'est pas expiré
-                    if (now in (med.startDate - 86_400_000L)..(med.endDate + 86_400_000L)) {
+                    // Vérifier si le traitement n'est pas expiré (ou s'il s'agit d'un traitement continu)
+                    val isExpired = med.endDate != null && now > (med.endDate + 86_400_000L)
+                    val isBeforeStart = now < (med.startDate - 86_400_000L)
+                    if (!isExpired && !isBeforeStart) {
                         // Vérifier si la prise n'a pas déjà été marquée comme prise
                         val existingLog = db.doseLogDao().getLogForDose(medicationId, scheduledDateTime)
                         if (existingLog?.status != "CONFIRMED") {

@@ -112,10 +112,10 @@ class PilulierRepository(
             for (medWithSched in medications) {
                 val med = medWithSched.medication
                 val medStart = Instant.ofEpochMilli(med.startDate).atZone(zone).toLocalDate()
-                val medEnd = Instant.ofEpochMilli(med.endDate).atZone(zone).toLocalDate()
+                val medEnd = med.endDate?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
 
-                // Vérifier si la date demandée est dans la période du traitement
-                if (!date.isBefore(medStart) && !date.isAfter(medEnd)) {
+                // Vérifier si la date demandée est dans la période du traitement (illimitée si medEnd est null)
+                if (!date.isBefore(medStart) && (medEnd == null || !date.isAfter(medEnd))) {
                     for (sched in medWithSched.schedules) {
                         val scheduledDateTime = date.atTime(sched.hour, sched.minute)
                             .atZone(zone).toInstant().toEpochMilli()

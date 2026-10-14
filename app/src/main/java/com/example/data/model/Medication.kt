@@ -13,7 +13,7 @@ data class Medication(
     val quantityPerDose: String = "",   // ex: "1 comprimé", "5 ml"
     val instructions: String = "",      // ex: "À prendre pendant le repas"
     val startDate: Long,                // Millis début de journée
-    val endDate: Long,                  // Millis fin de journée
+    val endDate: Long? = null,          // Millis fin de journée (null si traitement continu/illimité)
     val isPaused: Boolean = false,      // Suspension temporaire des rappels
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()

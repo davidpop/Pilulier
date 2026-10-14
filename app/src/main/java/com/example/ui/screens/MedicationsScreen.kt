@@ -111,13 +111,13 @@ fun MedicationsScreen(
         val target = treatmentToViewDetails!!
         val med = target.medication
         val start = Instant.ofEpochMilli(med.startDate).atZone(zone).toLocalDate()
-        val end = Instant.ofEpochMilli(med.endDate).atZone(zone).toLocalDate()
-        val daysCount = ChronoUnit.DAYS.between(start, end) + 1
+        val end = med.endDate?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+        val daysCount = end?.let { ChronoUnit.DAYS.between(start, it) + 1 }
 
         val status = when {
             med.isPaused -> TreatmentStatus.PAUSED
             today.isBefore(start) -> TreatmentStatus.UPCOMING
-            today.isAfter(end) -> TreatmentStatus.FINISHED
+            end != null && today.isAfter(end) -> TreatmentStatus.FINISHED
             else -> TreatmentStatus.ACTIVE
         }
 
@@ -215,7 +215,11 @@ fun MedicationsScreen(
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                         Text(
-                            text = "Du ${start.format(dateFormatter)} au ${end.format(dateFormatter)} ($daysCount jours)",
+                            text = if (end != null) {
+                                "Du ${start.format(dateFormatter)} au ${end.format(dateFormatter)} ($daysCount jours)"
+                            } else {
+                                "À partir du ${start.format(dateFormatter)} (Traitement continu)"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -380,13 +384,13 @@ fun MedicationsScreen(
     val filteredTreatments = remember(treatments, activeFilter, today) {
         treatments.filter { item ->
             val start = Instant.ofEpochMilli(item.medication.startDate).atZone(zone).toLocalDate()
-            val end = Instant.ofEpochMilli(item.medication.endDate).atZone(zone).toLocalDate()
+            val end = item.medication.endDate?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
             val isPaused = item.medication.isPaused
 
             val status = when {
                 isPaused -> TreatmentStatus.PAUSED
                 today.isBefore(start) -> TreatmentStatus.UPCOMING
-                today.isAfter(end) -> TreatmentStatus.FINISHED
+                end != null && today.isAfter(end) -> TreatmentStatus.FINISHED
                 else -> TreatmentStatus.ACTIVE
             }
 
@@ -505,13 +509,13 @@ fun MedicationsScreen(
                     items(filteredTreatments, key = { it.medication.id }) { item ->
                         val med = item.medication
                         val start = Instant.ofEpochMilli(med.startDate).atZone(zone).toLocalDate()
-                        val end = Instant.ofEpochMilli(med.endDate).atZone(zone).toLocalDate()
-                        val daysCount = ChronoUnit.DAYS.between(start, end) + 1
+                        val end = med.endDate?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+                        val daysCount = end?.let { ChronoUnit.DAYS.between(start, it) + 1 }
 
                         val status = when {
                             med.isPaused -> TreatmentStatus.PAUSED
                             today.isBefore(start) -> TreatmentStatus.UPCOMING
-                            today.isAfter(end) -> TreatmentStatus.FINISHED
+                            end != null && today.isAfter(end) -> TreatmentStatus.FINISHED
                             else -> TreatmentStatus.ACTIVE
                         }
 
@@ -622,7 +626,11 @@ fun MedicationsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Du ${start.format(dateFormatter)} au ${end.format(dateFormatter)} ($daysCount jours)",
+                                        text = if (end != null) {
+                                            "Du ${start.format(dateFormatter)} au ${end.format(dateFormatter)} ($daysCount jours)"
+                                        } else {
+                                            "À partir du ${start.format(dateFormatter)} (Traitement continu)"
+                                        },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )

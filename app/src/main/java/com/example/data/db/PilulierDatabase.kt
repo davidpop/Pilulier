@@ -16,7 +16,7 @@ import com.example.data.model.Medication
         DoseSchedule::class,
         DoseLog::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class PilulierDatabase : RoomDatabase() {

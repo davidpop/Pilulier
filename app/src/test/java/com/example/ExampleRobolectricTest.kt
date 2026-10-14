@@ -143,6 +143,38 @@ class ExampleRobolectricTest {
     }
 
     @Test
+    fun testCreateTreatmentUnlimitedDuration() = runBlocking {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val startMillis = today.atStartOfDay(zone).toInstant().toEpochMilli()
+
+        val med = Medication(
+            name = "Lévothyrox",
+            dosage = "75 µg",
+            form = "Comprimé",
+            startDate = startMillis,
+            endDate = null // Traitement continu / durée illimitée
+        )
+        val schedules = listOf(DoseSchedule(medicationId = 0, hour = 7, minute = 30))
+
+        val medId = repository.saveMedication(med, schedules)
+        assertTrue(medId > 0)
+
+        val retrieved = repository.getMedicationById(medId).first()
+        assertNotNull(retrieved)
+        assertNull(retrieved?.medication?.endDate)
+
+        // Doit générer des prises aujourd'hui et dans le futur
+        val todayDoses = repository.getDosesForDate(today).first()
+        assertEquals(1, todayDoses.size)
+        assertEquals("Lévothyrox", todayDoses.first().medicationName)
+
+        val futureDoses = repository.getDosesForDate(today.plusDays(60)).first()
+        assertEquals(1, futureDoses.size)
+        assertEquals("Lévothyrox", futureDoses.first().medicationName)
+    }
+
+    @Test
     fun testTreatmentMultipleDays() = runBlocking {
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now()
